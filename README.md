@@ -1,17 +1,15 @@
 # dailynews
 
-每日新闻简报生成脚本：联网抓取最近 24 小时新闻，并按指定主题生成中文简报。
+每日新闻简报生成脚本（直接搜索版，不使用 RSS）：联网搜索最近 24 小时新闻，并按指定主题输出中文简报。
 
 ## 功能
-- 优先抓取权威媒体 RSS/Atom（新华社、人民网、Reuters、AP、BBC、FT、MIT Tech Review 等）。
-- 自动筛选近 24 小时新闻，并聚焦：
+- 通过 GDELT 新闻搜索 API 直接检索近 24 小时新闻（非 RSS）。
+- 聚焦三大领域：
   - 中国政治
   - 世界战争格局
   - 全球人工智能产业发展
-- 支持 OpenAI 生成高信息密度版本；若未配置 API Key 或调用失败，自动降级为本地模板输出。
-- 支持固定格式输出：
-  - `【每日重点新闻】`（1-3 条 + 重要性说明）
-  - `【新闻简报】`（最多 10 条，含标题/3句摘要/影响）
+- 按媒体域名做“权威媒体优先”排序（Reuters、AP、BBC、FT、新华社、人民网等优先）。
+- 支持 OpenAI / SCNet 模型生成；失败自动回退本地模板。
 - 支持每天 **07:20** 自动执行。
 
 ## 环境
@@ -24,6 +22,18 @@
 python3 daily_briefing.py --output daily_news_briefing.md
 ```
 
+### 指定模型服务商
+```bash
+# 自动尝试（默认）：先 OpenAI，再 SCNet
+python3 daily_briefing.py --provider auto --model gpt-4o-mini
+
+# 仅 OpenAI
+python3 daily_briefing.py --provider openai --model gpt-4o-mini
+
+# 仅 SCNet
+python3 daily_briefing.py --provider scnet --model <scnet_model_name>
+```
+
 ### 常驻定时（每天 07:20）
 ```bash
 python3 daily_briefing.py --daily --time 07:20 --output daily_news_briefing.md
@@ -34,14 +44,40 @@ python3 daily_briefing.py --daily --time 07:20 --output daily_news_briefing.md
 20 7 * * * cd /workspace/dailynews && /usr/bin/python3 daily_briefing.py --output daily_news_briefing.md >> cron.log 2>&1
 ```
 
-### 使用 OpenAI（可选）
+## 模型配置
+### OpenAI
 ```bash
 export OPENAI_API_KEY="your_key"
-# 可选：兼容自定义网关
-export OPENAI_BASE_URL="https://api.openai.com/v1"
-python3 daily_briefing.py --model gpt-4o-mini --output daily_news_briefing.md
+export OPENAI_BASE_URL="https://api.openai.com/v1"  # 可选
+```
+
+### SCNet（方式一：OpenAI SDK）
+根据你的说明：
+- `base_url: https://api.scnet.cn/api/llm`
+- `api_key: your_api_key`
+- `model: 平台提供的模型名称`
+- OpenAI SDK 会自动补 `/v1`，所以 base_url **不要包含 `/v1`**。
+
+本脚本不是直接使用 OpenAI SDK，但兼容这一约定：
+```bash
+export SCNET_API_KEY="your_api_key"
+export SCNET_BASE_URL_SDK="https://api.scnet.cn/api/llm"
+python3 daily_briefing.py --provider scnet --model <scnet_model_name>
+```
+
+### SCNet（方式二：直接 HTTP 调用）
+根据你的说明：
+- `base_url: https://api.scnet.cn/api/llm/v1`
+- 完整请求：`POST https://api.scnet.cn/api/llm/v1/chat/completions`
+
+本脚本默认即按该方式调用：
+```bash
+export SCNET_API_KEY="your_api_key"
+# 可选：若你有代理网关，可覆盖默认地址
+export SCNET_BASE_URL_HTTP="https://api.scnet.cn/api/llm/v1"
+python3 daily_briefing.py --provider scnet --model <scnet_model_name>
 ```
 
 ## 说明
-- 某些运行环境可能对外网 RSS 源有限制（如 403/proxy）。脚本会跳过失败源并继续处理其余源。
-- 如果全部源都不可达，仍会输出格式完整的空结果，确保自动化任务不中断。
+- 已按你的要求改为“直接搜索”方案，不依赖 RSS 源。
+- 若运行环境限制外网访问，脚本会记录告警并输出结构化降级结果，保证自动任务不中断。
