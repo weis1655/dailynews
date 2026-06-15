@@ -37,7 +37,7 @@ python3 daily_briefing.py --daily --time 07:20 --output daily_news_briefing.md
 ### 使用 OpenAI（可选）
 ```bash
 export OPENAI_API_KEY="your_key"
-# 可选，兼容自定义网关
+# 可选：兼容自定义网关
 export OPENAI_BASE_URL="https://api.openai.com/v1"
 python3 daily_briefing.py --model gpt-4o-mini --output daily_news_briefing.md
 ```
